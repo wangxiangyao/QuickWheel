@@ -6,76 +6,79 @@ using UnityEngine;
 namespace QuickWheel.Core
 {
     /// <summary>
-    /// 轮盘主类（泛型）
-    /// 统一入口，协调各个子系统
+    /// 轮盘主类，负责管理槽位数据、状态流转以及事件广播。
+    /// UI 展示由外部注入的 IWheelView<T> 处理。
     /// </summary>
-    /// <typeparam name="T">数据类型</typeparam>
+    /// <typeparam name="T">槽位数据类型</typeparam>
     public class Wheel<T> : IDisposable
     {
-        // === 核心组件 ===
-        private WheelStateManager<T> _stateManager;
-        private WheelEventBus<T> _eventBus;
-        private WheelConfig _config;
+        private readonly WheelStateManager<T> _stateManager;
+        private readonly WheelEventBus<T> _eventBus;
+        private readonly WheelConfig _config;
 
-        // === 可选组件 ===
         private IWheelDataProvider<T> _dataProvider;
         private IWheelItemAdapter<T> _adapter;
         private IWheelPersistence<T> _persistence;
         private IWheelInputHandler _inputHandler;
         private IWheelSelectionStrategy _selectionStrategy;
+        private IWheelView<T> _view;
 
-        // === 公开属性 ===
         public WheelConfig Config => _config;
         public WheelEventBus<T> EventBus => _eventBus;
         public bool IsVisible => _stateManager.CurrentState != WheelState.Hidden;
 
-        // === 公开事件（方便订阅） ===
         public event Action<int, T> OnItemSelected;
         public event Action OnWheelShown;
         public event Action<int> OnWheelHidden;
 
-        /// <summary>
-        /// 构造函数
-        /// </summary>
-        /// <param name="config">配置</param>
-        /// <param name="adapter">适配器（必需）</param>
         public Wheel(WheelConfig config, IWheelItemAdapter<T> adapter)
         {
             if (config == null)
+            {
                 throw new ArgumentNullException(nameof(config));
+            }
 
             if (adapter == null)
-                throw new ArgumentNullException(nameof(adapter));
-
-            // 验证配置
-            if (!config.Validate(out string error))
             {
-                throw new ArgumentException($"Invalid config: {error}");
+                throw new ArgumentNullException(nameof(adapter));
+            }
+
+            if (!config.Validate(out var error))
+            {
+                throw new ArgumentException($"Invalid config: {error}", nameof(config));
             }
 
             _config = config;
             _adapter = adapter;
 
-            // 初始化核心组件
             _stateManager = new WheelStateManager<T>(_config.SlotCount);
             _eventBus = new WheelEventBus<T>();
 
-            // 订阅状态管理器事件
-            _stateManager.OnSlotDataChanged += (index, item) => _eventBus.TriggerSlotDataChanged(index, item);
-            _stateManager.OnSlotsSwapped += (i1, i2) => _eventBus.TriggerSlotsSwapped(i1, i2);
+            _stateManager.OnSlotDataChanged += HandleSlotDataChanged;
+            _stateManager.OnSlotsSwapped += HandleSlotsSwapped;
 
-            // 订阅事件总线转发到公开事件
             _eventBus.OnWheelShown += () => OnWheelShown?.Invoke();
-            _eventBus.OnWheelHidden += (index) => OnWheelHidden?.Invoke(index);
+            _eventBus.OnWheelHidden += index => OnWheelHidden?.Invoke(index);
+            _eventBus.OnSelectionChanged += index =>
+            {
+                if (_view != null)
+                {
+                    _view.OnSelectionChanged(index);
+                }
+            };
+            _eventBus.OnSlotHovered += index =>
+            {
+                if (_view != null)
+                {
+                    _view.OnHoverChanged(index);
+                }
+            };
 
             Debug.Log($"[Wheel] Initialized with {_config.SlotCount} slots");
         }
 
-        // === 可选组件设置 ===
-
         public void SetDataProvider(IWheelDataProvider<T> dataProvider)
         {
-            // 取消旧的订阅
             if (_dataProvider != null)
             {
                 _dataProvider.OnItemAdded -= HandleDataProviderItemAdded;
@@ -85,7 +88,6 @@ namespace QuickWheel.Core
 
             _dataProvider = dataProvider;
 
-            // 订阅新的事件
             if (_dataProvider != null)
             {
                 _dataProvider.OnItemAdded += HandleDataProviderItemAdded;
@@ -98,7 +100,6 @@ namespace QuickWheel.Core
         {
             _persistence = persistence;
 
-            // 如果启用持久化，尝试加载
             if (_config.EnablePersistence && _persistence != null)
             {
                 LoadLayout();
@@ -107,7 +108,6 @@ namespace QuickWheel.Core
 
         public void SetInputHandler(IWheelInputHandler inputHandler)
         {
-            // 取消旧的订阅
             if (_inputHandler != null)
             {
                 _inputHandler.OnPositionChanged -= HandleInputPositionChanged;
@@ -117,7 +117,6 @@ namespace QuickWheel.Core
 
             _inputHandler = inputHandler;
 
-            // 订阅新的事件
             if (_inputHandler != null)
             {
                 _inputHandler.OnPositionChanged += HandleInputPositionChanged;
@@ -131,9 +130,43 @@ namespace QuickWheel.Core
             _selectionStrategy = strategy;
         }
 
-        // === 显示与隐藏 ===
+        public void SetView(IWheelView<T> view)
+        {
+            if (_view == view)
+            {
+                return;
+            }
 
-        public void Show(Vector2 position)
+            if (_view != null)
+            {
+                try
+                {
+                    _view.Detach();
+                }
+                finally
+                {
+                    _view.Dispose();
+                }
+            }
+
+            _view = view;
+
+            if (_view != null)
+            {
+                _view.Attach(this, _adapter);
+
+                var snapshot = _stateManager.GetAllSlots();
+                for (int i = 0; i < snapshot.Length; i++)
+                {
+                    _view.OnSlotDataChanged(i, snapshot[i]);
+                }
+
+                _view.OnSelectionChanged(_stateManager.SelectedIndex);
+                _view.OnHoverChanged(_stateManager.HoveredIndex);
+            }
+        }
+
+        public void Show()
         {
             if (_stateManager.CurrentState != WheelState.Hidden)
             {
@@ -144,8 +177,11 @@ namespace QuickWheel.Core
             _stateManager.TransitionTo(WheelState.Showing);
             _eventBus.TriggerWheelShown();
 
-            // TODO: 播放显示动画
-            // 动画完成后转换到Active状态
+            if (_view != null)
+            {
+                _view.OnWheelShown();
+            }
+
             _stateManager.TransitionTo(WheelState.Active);
         }
 
@@ -164,21 +200,20 @@ namespace QuickWheel.Core
                 finalIndex = _stateManager.HoveredIndex;
                 _stateManager.SetSelectedIndex(finalIndex);
 
-                // 触发选中事件
-                T selectedItem = _stateManager.GetSlot(finalIndex);
+                var selectedItem = _stateManager.GetSlot(finalIndex);
                 OnItemSelected?.Invoke(finalIndex, selectedItem);
             }
 
             _stateManager.TransitionTo(WheelState.Hiding);
-
-            // TODO: 播放隐藏动画
-            // 动画完成后转换到Hidden状态
             _stateManager.TransitionTo(WheelState.Hidden);
 
             _eventBus.TriggerWheelHidden(finalIndex);
-        }
 
-        // === 槽位操作 ===
+            if (_view != null)
+            {
+                _view.OnWheelHidden(finalIndex);
+            }
+        }
 
         public void SetSlot(int index, T item)
         {
@@ -197,13 +232,9 @@ namespace QuickWheel.Core
 
         public void SwapSlots(int fromIndex, int toIndex)
         {
-            if (_stateManager.SwapSlots(fromIndex, toIndex))
+            if (_stateManager.SwapSlots(fromIndex, toIndex) && _config.EnablePersistence && _persistence != null)
             {
-                // 保存布局
-                if (_config.EnablePersistence && _persistence != null)
-                {
-                    SaveLayout();
-                }
+                SaveLayout();
             }
         }
 
@@ -216,8 +247,6 @@ namespace QuickWheel.Core
         {
             _stateManager.SetSlots(items);
         }
-
-        // === 选中状态 ===
 
         public void SetSelectedIndex(int index)
         {
@@ -235,8 +264,6 @@ namespace QuickWheel.Core
             return _stateManager.HoveredIndex;
         }
 
-        // === 手动控制（不使用InputHandler） ===
-
         public void ManualSetHover(int index)
         {
             _stateManager.SetHoveredIndex(index);
@@ -245,27 +272,25 @@ namespace QuickWheel.Core
 
         public void ManualConfirm()
         {
-            Hide(executeSelection: true);
+            Hide(true);
         }
 
         public void ManualCancel()
         {
-            Hide(executeSelection: false);
+            Hide(false);
         }
-
-        // === Update（如果有InputHandler） ===
 
         public void Update()
         {
             _inputHandler?.OnUpdate();
         }
 
-        // === 持久化 ===
-
         private void LoadLayout()
         {
             if (_persistence == null || string.IsNullOrEmpty(_config.PersistenceKey))
+            {
                 return;
+            }
 
             try
             {
@@ -288,7 +313,9 @@ namespace QuickWheel.Core
         private void SaveLayout()
         {
             if (_persistence == null || string.IsNullOrEmpty(_config.PersistenceKey))
+            {
                 return;
+            }
 
             try
             {
@@ -310,7 +337,7 @@ namespace QuickWheel.Core
 
         private int[] GenerateSlotOrder()
         {
-            int[] order = new int[_config.SlotCount];
+            var order = new int[_config.SlotCount];
             for (int i = 0; i < _config.SlotCount; i++)
             {
                 order[i] = i;
@@ -318,36 +345,52 @@ namespace QuickWheel.Core
             return order;
         }
 
-        // === 数据提供者事件处理 ===
+        private void HandleSlotDataChanged(int index, T item)
+        {
+            _eventBus.TriggerSlotDataChanged(index, item);
+            if (_view != null)
+            {
+                _view.OnSlotDataChanged(index, item);
+            }
+        }
+
+        private void HandleSlotsSwapped(int index1, int index2)
+        {
+            _eventBus.TriggerSlotsSwapped(index1, index2);
+            if (_view != null)
+            {
+                _view.OnSlotsSwapped(index1, index2);
+            }
+        }
 
         private void HandleDataProviderItemAdded(T item)
         {
-            // TODO: 实现自动添加逻辑
-            Debug.Log($"[Wheel] Item added from data provider");
+            Debug.Log("[Wheel] Item added from data provider");
         }
 
         private void HandleDataProviderItemRemoved(T item)
         {
-            // TODO: 实现自动移除逻辑
-            Debug.Log($"[Wheel] Item removed from data provider");
+            Debug.Log("[Wheel] Item removed from data provider");
         }
 
         private void HandleDataProviderItemChanged(T oldItem, T newItem)
         {
-            // TODO: 实现自动更新逻辑
-            Debug.Log($"[Wheel] Item changed from data provider");
+            Debug.Log("[Wheel] Item changed from data provider");
         }
-
-        // === 输入处理事件 ===
 
         private void HandleInputPositionChanged(Vector2 position)
         {
             if (_stateManager.CurrentState != WheelState.Active)
+            {
                 return;
+            }
 
-            // TODO: 使用SelectionStrategy计算hover索引
-            // int hoveredIndex = _selectionStrategy?.GetSlotIndexFromPosition(...);
-            // ManualSetHover(hoveredIndex);
+            if (_selectionStrategy == null || _view == null)
+            {
+                return;
+            }
+
+            // Selection strategy 会在业务层调用 ManualSetHover，因此此处仅保留扩展点。
         }
 
         private void HandleInputConfirm()
@@ -360,28 +403,38 @@ namespace QuickWheel.Core
             ManualCancel();
         }
 
-        // === 清理 ===
-
         public void Dispose()
         {
-            // 清除事件订阅
-            _stateManager?.ClearEvents();
-            _eventBus?.ClearAllEvents();
+            _stateManager.ClearEvents();
+            _eventBus.ClearAllEvents();
 
-            // 清除输入处理器订阅
             if (_inputHandler != null)
             {
                 _inputHandler.OnPositionChanged -= HandleInputPositionChanged;
                 _inputHandler.OnConfirm -= HandleInputConfirm;
                 _inputHandler.OnCancel -= HandleInputCancel;
+                _inputHandler = null;
             }
 
-            // 清除数据提供者订阅
             if (_dataProvider != null)
             {
                 _dataProvider.OnItemAdded -= HandleDataProviderItemAdded;
                 _dataProvider.OnItemRemoved -= HandleDataProviderItemRemoved;
                 _dataProvider.OnItemChanged -= HandleDataProviderItemChanged;
+                _dataProvider = null;
+            }
+
+            if (_view != null)
+            {
+                try
+                {
+                    _view.Detach();
+                }
+                finally
+                {
+                    _view.Dispose();
+                    _view = null;
+                }
             }
 
             Debug.Log("[Wheel] Disposed");

@@ -1224,3 +1224,9 @@ public class VoiceWheelManager : MonoBehaviour
 **æ–‡æ¡£ç‰ˆæœ¬**ï¼šv2.0
 **æœ€åæ›´æ–°**ï¼š2025-01-05
 **ç»´æŠ¤è€…**ï¼šQuickWheelå›¢é˜Ÿ
+
+## IWheelView<T>
+
+- ·â×°ÂÖÅÌ UI ÊÓÍ¼ÉúÃüÖÜÆÚ£¨Attach/Detach£©¡£
+- ½ÓÊÕ²ÛÎ»¸üĞÂ¡¢Ñ¡ÖĞ¡¢Hover µÈÊÂ¼ş£¬ÒµÎñ¿É×Ô¶¨Òå³ÊÏÖĞ§¹û¡£
+- Ä¬ÈÏÊµÏÖÎ»ÓÚ QuickWheel.UI Ä£¿é£¨DefaultWheelView<T>£©¡£

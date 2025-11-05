@@ -42,15 +42,15 @@ namespace QuickWheel.Core.States
         public int HoveredIndex => _hoveredIndex;
 
         /// <summary>
-        /// 初始化状态管理器
+        /// 初始化状态管理器（固定9槽位）
         /// </summary>
-        /// <param name="slotCount">槽位数量</param>
+        /// <param name="slotCount">槽位数量（应为9）</param>
         public WheelStateManager(int slotCount)
         {
-            if (slotCount < 3 || slotCount > 8)
+            if (slotCount != 9)
             {
-                Debug.LogError($"Invalid slot count: {slotCount}. Must be between 3 and 8.");
-                slotCount = Mathf.Clamp(slotCount, 3, 8);
+                Debug.LogWarning($"WheelStateManager expects 9 slots for grid layout, but got {slotCount}. Using 9 anyway.");
+                slotCount = 9;
             }
 
             _slots = new T[slotCount];

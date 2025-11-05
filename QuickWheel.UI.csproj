@@ -1,0 +1,55 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <Nullable>disable</Nullable>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <PackageId>QuickWheel.UI</PackageId>
+    <PackageVersion>1.0.0</PackageVersion>
+    <Authors>QuickWheel Team</Authors>
+    <Description>QuickWheel default 9-grid view implementation</Description>
+    <PackageTags>unity;mod;wheel;ui;selection</PackageTags>
+    <AssemblyName>QuickWheel.UI</AssemblyName>
+    <RootNamespace>QuickWheel.UI</RootNamespace>
+    <DuckovPath>D:\steam\steamapps\common\Escape from Duckov</DuckovPath>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(DuckovPath)' != ''">
+    <DuckovPath>$(DuckovPath)</DuckovPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="QuickWheel.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(DuckovPath)' != ''">
+    <Reference Include="$(DuckovPath)\Duckov_Data\Managed\TeamSoda.*">
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="$(DuckovPath)\Duckov_Data\Managed\ItemStatsSystem.dll">
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="$(DuckovPath)\Duckov_Data\Managed\Unity*">
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="$(DuckovPath)\Duckov_Data\Managed\Assembly-CSharp.dll">
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="$(DuckovPath)\Duckov_Data\Managed\SodaLocalization.dll">
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="$(DuckovPath)\Duckov_Data\Managed\DOTween.dll">
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="$(DuckovPath)\Duckov_Data\Managed\DOTweenPro.dll">
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="src\UI\**\*.cs" />
+  </ItemGroup>
+
+</Project>

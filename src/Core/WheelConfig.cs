@@ -3,35 +3,31 @@ using UnityEngine;
 namespace QuickWheel.Core
 {
     /// <summary>
-    /// 轮盘配置类
-    /// 支持灵活定制轮盘的各种参数
+    /// 轮盘配置类 - 固定9宫格布局
+    /// 9个槽位（8个方向 + 1个中心空位）
     /// </summary>
     public class WheelConfig
     {
         // === 核心配置 ===
 
         /// <summary>
-        /// 槽位数量（强制约束3-8）
+        /// 槽位数量（固定9宫格）
+        /// 实际8个可用槽位（中心为空）
         /// </summary>
-        private int _slotCount = 8;
-        public int SlotCount
-        {
-            get => _slotCount;
-            set => _slotCount = Mathf.Clamp(value, 3, 8);
-        }
+        public const int SLOT_COUNT = 9;
+        public int SlotCount => SLOT_COUNT;
 
         // === 布局配置 ===
 
         /// <summary>
-        /// 轮盘半径（像素）
+        /// 格子大小（像素）
         /// </summary>
-        public float SlotRadius = 120f;
+        public float GridCellSize = 40f;
 
         /// <summary>
-        /// 自定义角度分布（null=均匀分布）
-        /// 例如：new float[] { 0, 45, 90, 135, 180, 225, 270, 315 }
+        /// 格子间距（像素）
         /// </summary>
-        public float[] CustomAngles = null;
+        public float GridSpacing = 5f;
 
         // === 交互配置 ===
 
@@ -81,20 +77,6 @@ namespace QuickWheel.Core
         /// <returns>true=有效，false=无效</returns>
         public bool Validate(out string error)
         {
-            // 槽位数量检查
-            if (SlotCount < 3 || SlotCount > 8)
-            {
-                error = "SlotCount must be between 3 and 8";
-                return false;
-            }
-
-            // 自定义角度检查
-            if (CustomAngles != null && CustomAngles.Length != SlotCount)
-            {
-                error = $"CustomAngles length ({CustomAngles.Length}) must match SlotCount ({SlotCount})";
-                return false;
-            }
-
             // 持久化键名检查
             if (EnablePersistence && string.IsNullOrEmpty(PersistenceKey))
             {
@@ -102,10 +84,17 @@ namespace QuickWheel.Core
                 return false;
             }
 
-            // 半径检查
-            if (SlotRadius <= 0)
+            // 格子大小检查
+            if (GridCellSize <= 0)
             {
-                error = "SlotRadius must be greater than 0";
+                error = "GridCellSize must be greater than 0";
+                return false;
+            }
+
+            // 格子间距检查
+            if (GridSpacing < 0)
+            {
+                error = "GridSpacing must be non-negative";
                 return false;
             }
 
@@ -121,19 +110,19 @@ namespace QuickWheel.Core
         }
 
         /// <summary>
-        /// 创建默认配置
+        /// 创建默认配置（9宫格布局）
         /// </summary>
         public static WheelConfig CreateDefault()
         {
             return new WheelConfig
             {
-                SlotCount = 8,
-                SlotRadius = 120f,
+                GridCellSize = 40f,
+                GridSpacing = 5f,
                 EnableDragSwap = true,
                 EnableClickSelect = true,
-                DeadZoneRadius = 40f,
+                DeadZoneRadius = 20f,
                 HoverScaleMultiplier = 1.15f,
-                AnimationDuration = 0.2f,
+                AnimationDuration = 0.1f,
                 EnablePersistence = false
             };
         }

@@ -886,3 +886,9 @@ QuickWheelæä¾›äº†ç®€æ´è€Œå¼ºå¤§çš„APIï¼Œæ”¯æŒï¼š
 **æ–‡æ¡£ç‰ˆæœ¬**ï¼šv2.0
 **æœ€åæ›´æ–°**ï¼š2025-01-05
 **ç»´æŠ¤è€…**ï¼šQuickWheelå›¢é˜Ÿ
+
+### 2025-11 UI ¸üĞÂÕªÒª
+
+- ĞÂÔö Wheel<T>.SetView(IWheelView<T> view) ÓÃÓÚ°ó¶¨»òÌæ»»ÊÓÍ¼¡£
+- ·ÏÆú EnableUI / UpdateUISelection / GetUIContainerRect µÈÖ±½Ó UI ²Ù×÷·½·¨¡£
+- WheelBuilder<T> ĞÂÔö .WithView()£¬QuickWheel.UI Ìá¹© .UseDefaultView() À©Õ¹¡£

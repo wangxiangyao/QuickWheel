@@ -1,342 +1,398 @@
-# QuickWheel - 通用轮盘模块
+﻿# QuickWheel - 閫氱敤杞洏妗嗘灦
 
-> 高度解耦、完全泛型、易于使用的Unity轮盘选择系统
+閫氱敤鐨?瀹牸杞洏绯荤粺妗嗘灦锛岀敤浜嶶nity Mod寮€鍙戙€?
 
-[![Version](https://img.shields.io/badge/version-2.0-blue.svg)](https://github.com/yourusername/QuickWheel)
-[![Unity](https://img.shields.io/badge/Unity-2020.3+-green.svg)](https://unity.com)
-[![License](https://img.shields.io/badge/license-MIT-orange.svg)](LICENSE)
+## 鐗规€?
 
----
+- **鍐呯疆9瀹牸UI** - 寮€绠卞嵆鐢紝鏃犻渶鎵嬪姩鍒涘缓UI
+- **鍥哄畾9瀹牸甯冨眬** - 8涓柟鍚戞Ы浣?+ 1涓腑蹇冪┖浣?
+- **娉涘瀷璁捐** - 鏀寔浠绘剰鏁版嵁绫诲瀷锛坄Wheel<T>`锛?
+- **鏋佺畝API** - 3琛屼唬鐮佸垱寤哄畬鏁磋疆鐩?
+- **鐭㈤噺閫夋嫨** - 鏍规嵁榧犳爣鏂瑰悜瑙掑害閫夋嫨鏍煎瓙
+- **鍙€夋寔涔呭寲** - JSON鏂囦欢淇濆瓨甯冨眬
+- **浜嬩欢椹卞姩** - 鐏垫椿鐨勪簨浠剁郴缁?
 
-## ✨ 特性
+## 蹇€熷紑濮?
 
-- ✅ **完全泛型** - 支持任意数据类型（Item、Voice、Emote等）
-- ✅ **3-8槽位可配置** - 灵活的槽位数量约束
-- ✅ **易于使用** - Builder模式，3行代码即可上手
-- ✅ **高度解耦** - 核心、UI、业务三层零依赖
-- ✅ **事件驱动** - 完善的事件系统，响应式更新
-- ✅ **可选功能** - 持久化、输入处理、数据提供者均可选
-- ✅ **多种输入** - 鼠标、手柄、触摸、VR等
-- ✅ **可扩展** - 支持自定义选择算法、持久化方式等
-
----
-
-## 🚀 快速开始
-
-### 最简使用（3行代码）
+### 鏈€灏忕ず渚嬶紙3琛屼唬鐮?+ 鍐呯疆UI锛?
 
 ```csharp
+// 1. 鍒涘缓杞洏锛堣嚜鍔ㄥ垱寤?瀹牸UI锛?
+var wheel = new WheelBuilder<YourDataType>()
+    .WithAdapter(new YourAdapter())
+    .Build();
+
+// 2. 娣诲姞鏁版嵁
+wheel.SetSlot(0, data1);
+wheel.SetSlot(1, data2);
+
+// 3. 鏄剧ず/闅愯棌
+wheel.Show();  // 鑷姩鏄剧ず鍦ㄩ紶鏍囦綅缃?
+wheel.Hide();  // 鑷姩闅愯棌
+```
+
+### 瀹屾暣绀轰緥锛堝惈UI鏇存柊锛?
+
+```csharp
+using UnityEngine;
 using QuickWheel.Core;
 using QuickWheel.Utils;
+using QuickWheel.Selection;
 
-// 1. 创建轮盘
-var wheel = WheelBuilder.CreateSimple<VoiceData>()
-    .WithAdapter(new VoiceWheelAdapter())
-    .Build();
-
-// 2. 添加数据
-wheel.SetSlot(0, new VoiceData { Name = "Hello", Icon = mySprite });
-
-// 3. 显示轮盘
-wheel.Show(Input.mousePosition);
-```
-
-### 监听选择事件
-
-```csharp
-wheel.OnItemSelected += (index, voiceData) =>
+public class VoiceWheelExample : MonoBehaviour
 {
-    Debug.Log($"选中了: {voiceData.Name}");
-    PlayVoice(voiceData);
-};
-```
-
----
-
-## 📦 项目结构
-
-```
-QuickWheel/
-├── Documentation/               # 📚 完整文档
-│   ├── Architecture.md         # 架构设计文档
-│   ├── API.md                  # API使用手册
-│   └── Interfaces.md           # 接口说明文档
-│
-├── Core/                        # 🎯 核心层（完全通用）
-│   ├── Interfaces/             # 核心接口定义
-│   │   ├── IWheelItem.cs
-│   │   ├── IWheelItemAdapter.cs
-│   │   ├── IWheelDataProvider.cs
-│   │   ├── IWheelPersistence.cs
-│   │   ├── IWheelInputHandler.cs
-│   │   └── IWheelSelectionStrategy.cs
-│   │
-│   ├── States/                 # 状态管理
-│   │   ├── WheelState.cs
-│   │   └── WheelStateManager.cs
-│   │
-│   ├── Wheel.cs                # 主类（泛型）
-│   ├── WheelConfig.cs          # 配置类
-│   ├── WheelGlobalConfig.cs    # 全局配置
-│   └── WheelEventBus.cs        # 事件总线
-│
-├── Utils/                       # 🔧 工具类
-│   ├── WheelItemWrapper.cs     # IWheelItem默认实现
-│   └── WheelBuilder.cs         # 构建器
-│
-├── UI/                          # 🎨 UI层（待实现）
-│   ├── WheelViewController.cs
-│   ├── WheelSlotView.cs
-│   └── WheelAnimator.cs
-│
-├── Input/                       # ⌨️ 输入实现（待实现）
-│   ├── MouseWheelInput.cs
-│   └── GamepadWheelInput.cs
-│
-├── Selection/                   # 🎯 选择算法（待实现）
-│   └── AngleSelectionStrategy.cs
-│
-├── Persistence/                 # 💾 持久化（待实现）
-│   └── JsonWheelPersistence.cs
-│
-└── Examples/                    # 📖 示例代码（待实现）
-    ├── ItemWheel/
-    └── VoiceWheel/
-```
-
----
-
-## 📊 开发进度
-
-### ✅ Phase 1: 核心层开发（已完成）
-
-- [x] 定义所有核心接口
-  - IWheelItem - UI显示接口
-  - IWheelItemAdapter - 适配器接口
-  - IWheelDataProvider - 数据源接口
-  - IWheelPersistence - 持久化接口
-  - IWheelInputHandler - 输入处理接口
-  - IWheelSelectionStrategy - 选择算法接口
-
-- [x] 实现配置系统
-  - WheelConfig - 实例配置（3-8槽位约束）
-  - WheelGlobalConfig - 全局配置
-
-- [x] 实现事件系统
-  - WheelEventBus - 事件总线
-  - 防循环触发锁机制
-
-- [x] 实现状态管理
-  - WheelState - 状态枚举
-  - WheelStateManager - 状态管理器
-
-- [x] 实现主类
-  - Wheel<T> - 泛型主类
-  - 完整的API接口
-
-- [x] 实现工具类
-  - WheelItemWrapper - 默认包装
-  - WheelBuilder - 构建器
-
-### 🚧 Phase 2: UI层开发（待开始）
-
-- [ ] WheelViewController - 轮盘视图控制器
-- [ ] WheelSlotView - 单个槽位视图
-- [ ] WheelAnimator - 动画控制器
-- [ ] Unity Prefabs - 可视化预制体
-
-### 🚧 Phase 3: 默认实现（待开始）
-
-- [ ] MouseWheelInput - 鼠标输入
-- [ ] AngleSelectionStrategy - 角度选择算法
-- [ ] JsonWheelPersistence - JSON持久化
-
-### 🚧 Phase 4: 示例代码（待开始）
-
-- [ ] ItemWheel - 物品轮盘示例
-- [ ] VoiceWheel - 语音轮盘示例
-- [ ] 完整的使用教程
-
----
-
-## 📚 文档
-
-详细文档请查看 `Documentation/` 目录：
-
-- **[Architecture.md](Documentation/Architecture.md)** - 架构设计文档
-  - 三层架构详解
-  - 类图和数据流图
-  - 设计模式说明
-  - 与旧架构对比
-
-- **[API.md](Documentation/API.md)** - API使用手册
-  - 快速开始教程
-  - 完整API参考
-  - 配置选项说明
-  - 常见用法示例
-
-- **[Interfaces.md](Documentation/Interfaces.md)** - 接口说明文档
-  - 每个接口的详细说明
-  - 实现指南和最佳实践
-  - 完整示例代码
-
----
-
-## 🏗️ 架构概览
-
-### 三层架构
-
-```
-业务层（ItemWheel、VoiceWheel）
-    ↓ 通过适配器
-适配层（Adapter、DataProvider）
-    ↓ 实现接口
-核心层（Wheel<T>、完全泛型）
-    ↓ 事件驱动
-UI层（WheelViewController、通用视图）
-```
-
-### 数据流
-
-```
-业务数据 → DataProvider → Adapter → 核心State → 事件通知 → UI渲染
-```
-
-### 事件流
-
-```
-用户输入 → InputHandler → Wheel → StateManager → EventBus → UI/业务响应
-```
-
----
-
-## 💡 使用示例
-
-### 完整配置示例
-
-```csharp
-var wheel = new WheelBuilder<VoiceData>()
-    .WithConfig(config => {
-        config.SlotCount = 6;
-        config.SlotRadius = 150f;
-        config.EnablePersistence = true;
-        config.PersistenceKey = "MyVoiceWheel";
-    })
-    .WithAdapter(new VoiceWheelAdapter())
-    .WithDataProvider(new VoiceDataProvider())
-    .WithInput(new MouseWheelInput(KeyCode.V))
-    .OnItemSelected((index, data) => PlayVoice(data))
-    .OnWheelShown(() => Debug.Log("Wheel shown"))
-    .Build();
-```
-
-### 多轮盘管理
-
-```csharp
-public class WheelManager : MonoBehaviour
-{
-    private Wheel<Item> _itemWheel;
-    private Wheel<VoiceData> _voiceWheel;
-    private Wheel<EmoteData> _emoteWheel;
+    private Wheel<VoiceData> _wheel;
+    private GridSelectionStrategy _selectionStrategy;
 
     void Start()
     {
-        _itemWheel = CreateItemWheel();   // 1-8键
-        _voiceWheel = CreateVoiceWheel(); // V键
-        _emoteWheel = CreateEmoteWheel(); // E键
+        // 鍒涘缓杞洏锛堣嚜鍔ㄥ垱寤哄唴缃甎I锛?
+        _wheel = new WheelBuilder<VoiceData>()
+            .WithAdapter(new VoiceWheelAdapter())
+            .WithSelectionStrategy(new GridSelectionStrategy())
+            .OnItemSelected((index, voice) => Debug.Log($"閫変腑: {voice.DisplayName}"))
+            .Build();
+
+        _selectionStrategy = new GridSelectionStrategy();
+
+        // 娣诲姞鏁版嵁鍒?涓Ы浣?
+        _wheel.SetSlot(0, voiceData1);  // 宸︿腑
+        _wheel.SetSlot(1, voiceData2);  // 鍙充腑
+        // ... 鏇村妲戒綅
+    }
+
+    void Update()
+    {
+        // 1. 澶勭悊鏄剧ず/闅愯棌
+        bool keyPressed = Input.GetKey(KeyCode.V);
+
+        if (keyPressed && !_wheel.IsVisible)
+            _wheel.Show();  // 鑷姩鏄剧ずUI
+        else if (!keyPressed && _wheel.IsVisible)
+            _wheel.Hide();  // 鑷姩闅愯棌UI
+
+        // 2. 鏇存柊閫夋嫨锛堟牴鎹紶鏍囨柟鍚戯級
+        if (_wheel.IsVisible)
+        {
+            var rect = _wheel.GetUIContainerRect();
+            Vector2 wheelCenter = rect.position;
+            Vector2 mousePos = Input.mousePosition;
+
+            // 妫€鏌ユ鍖?
+            if (!_selectionStrategy.IsInDeadZone(wheelCenter, mousePos, 20f))
+            {
+                int index = _selectionStrategy.GetSlotIndexFromPosition(
+                    wheelCenter, mousePos, 9, null
+                );
+                _wheel.UpdateUISelection(index == 8 ? -1 : index);
+            }
+        }
+    }
+
+    void OnDestroy()
+    {
+        _wheel?.Dispose();
     }
 }
 ```
 
----
-
-## 🔧 核心API
-
-### 创建轮盘
+### 閫傞厤鍣ㄧず渚?
 
 ```csharp
-// 简单模式
-var wheel = WheelBuilder.CreateSimple<T>()
-    .WithAdapter(adapter)
-    .Build();
+public class VoiceWheelAdapter : IWheelItemAdapter<VoiceData>
+{
+    public IWheelItem ToWheelItem(VoiceData voice)
+    {
+        if (voice == null) return null;
 
-// 完整模式
+        return new WheelItemWrapper
+        {
+            Icon = voice.Icon,
+            DisplayName = voice.DisplayName,
+            IsValid = true
+        };
+    }
+
+    public VoiceData FromWheelItem(IWheelItem item) => null;
+}
+```
+
+## 9瀹牸甯冨眬
+
+```
+[7] [2] [6]    宸︿笂  涓婁腑  鍙充笂
+[0] [ ] [1]    宸︿腑  涓績  鍙充腑
+[4] [3] [5]    宸︿笅  涓嬩腑  鍙充笅
+```
+
+- **绱㈠紩 0-7**: 8涓彲鐢ㄦЫ浣?
+- **绱㈠紩 8**: 涓績锛堜繚鐣欙紝涓嶄娇鐢級
+
+## 鐩綍缁撴瀯
+
+```
+QuickWheel/
+鈹溾攢鈹€ src/
+鈹?  鈹溾攢鈹€ Core/                    # 鏍稿績灞?
+鈹?  鈹?  鈹溾攢鈹€ Wheel.cs            # 涓荤被 Wheel<T>
+鈹?  鈹?  鈹溾攢鈹€ WheelConfig.cs      # 閰嶇疆绫伙紙鍥哄畾9妲戒綅锛?
+鈹?  鈹?  鈹溾攢鈹€ WheelEventBus.cs    # 浜嬩欢鎬荤嚎
+鈹?  鈹?  鈹斺攢鈹€ States/             # 鐘舵€佺鐞?
+鈹?  鈹溾攢鈹€ Interfaces/             # 鎺ュ彛瀹氫箟
+鈹?  鈹?  鈹溾攢鈹€ IWheelItem.cs       # UI鏁版嵁鎺ュ彛
+鈹?  鈹?  鈹溾攢鈹€ IWheelItemAdapter.cs # 閫傞厤鍣ㄦ帴鍙?
+鈹?  鈹?  鈹溾攢鈹€ IWheelSelectionStrategy.cs # 閫夋嫨绛栫暐鎺ュ彛
+鈹?  鈹?  鈹溾攢鈹€ IWheelPersistence.cs # 鎸佷箙鍖栨帴鍙?
+鈹?  鈹?  鈹斺攢鈹€ IWheelInputHandler.cs # 杈撳叆澶勭悊鎺ュ彛
+鈹?  鈹溾攢鈹€ Selection/              # 閫夋嫨绛栫暐
+鈹?  鈹?  鈹斺攢鈹€ GridSelectionStrategy.cs # 9瀹牸閫夋嫨鍣?
+鈹?  鈹溾攢鈹€ Input/                  # 杈撳叆澶勭悊
+鈹?  鈹?  鈹斺攢鈹€ MouseWheelInput.cs  # 榧犳爣杈撳叆
+鈹?  鈹溾攢鈹€ Persistence/            # 鎸佷箙鍖?
+鈹?  鈹?  鈹斺攢鈹€ JsonWheelPersistence.cs # JSON鎸佷箙鍖?
+鈹?  鈹斺攢鈹€ Utils/                  # 宸ュ叿绫?
+鈹?      鈹溾攢鈹€ WheelBuilder.cs     # Builder妯″紡
+鈹?      鈹斺攢鈹€ WheelItemWrapper.cs # 榛樿IWheelItem瀹炵幇
+鈹溾攢鈹€ Examples/                   # 绀轰緥浠ｇ爜
+鈹?  鈹溾攢鈹€ VoiceData.cs           # 绀轰緥鏁版嵁绫?
+鈹?  鈹溾攢鈹€ VoiceWheelAdapter.cs   # 绀轰緥閫傞厤鍣?
+鈹?  鈹斺攢鈹€ GridExample/           # 瀹屾暣9瀹牸绀轰緥
+鈹?      鈹溾攢鈹€ GridWheelExample.cs # 涓荤ず渚?
+鈹?      鈹溾攢鈹€ GridWheelDisplay.cs # UI鏄剧ず缁勪欢
+鈹?      鈹斺攢鈹€ GridWheelSlot.cs   # 妲戒綅鏁版嵁缁撴瀯
+鈹斺攢鈹€ Documentation/              # 璇︾粏鏂囨。
+    鈹溾攢鈹€ Architecture.md         # 鏋舵瀯璁捐
+    鈹溾攢鈹€ API.md                 # API鎵嬪唽
+    鈹斺攢鈹€ Interfaces.md          # 鎺ュ彛璇存槑
+```
+
+## 鏍稿績姒傚康
+
+### 1. 娉涘瀷杞洏 `Wheel<T>`
+
+鏀寔浠绘剰鏁版嵁绫诲瀷鐨勮疆鐩樼郴缁燂細
+
+```csharp
+Wheel<VoiceData> voiceWheel;
+Wheel<Item> itemWheel;
+Wheel<Skill> skillWheel;
+```
+
+### 2. 閫傞厤鍣ㄦā寮?
+
+閫氳繃 `IWheelItemAdapter<T>` 灏嗕笟鍔℃暟鎹浆鎹负UI鏁版嵁锛?
+
+```csharp
+public interface IWheelItemAdapter<T>
+{
+    IWheelItem ToWheelItem(T data);
+    T FromWheelItem(IWheelItem item);
+}
+```
+
+### 3. 9瀹牸閫夋嫨绛栫暐
+
+`GridSelectionStrategy` 鏍规嵁榧犳爣鐩稿杞洏涓績鐨勮搴﹂€夋嫨8涓柟鍚戯細
+
+- 鍙充腑: 337.5掳 - 22.5掳
+- 鍙充笅: 22.5掳 - 67.5掳
+- 涓嬩腑: 67.5掳 - 112.5掳
+- 宸︿笅: 112.5掳 - 157.5掳
+- 宸︿腑: 157.5掳 - 202.5掳
+- 宸︿笂: 202.5掳 - 247.5掳
+- 涓婁腑: 247.5掳 - 292.5掳
+- 鍙充笂: 292.5掳 - 337.5掳
+
+### 4. 浜嬩欢绯荤粺
+
+```csharp
+wheel.OnItemSelected += (index, data) => { /* 閫変腑浜嬩欢 */ };
+wheel.OnWheelShown += () => { /* 鏄剧ず浜嬩欢 */ };
+wheel.OnWheelHidden += (finalIndex) => { /* 闅愯棌浜嬩欢 */ };
+```
+
+### 5. 鍙€夋寔涔呭寲
+
+```csharp
+.WithConfig(config =>
+{
+    config.EnablePersistence = true;
+    config.PersistenceKey = "MyWheel";
+})
+.WithPersistence(new JsonWheelPersistence<T>())
+```
+
+## UI瀹炵幇
+
+鏈鏋?*鍐呯疆9瀹牸UI**锛屾棤闇€鎵嬪姩鍒涘缓锛?
+
+### 浣跨敤鍐呯疆UI锛堥粯璁わ級
+
+```csharp
+// 鍒涘缓杞洏鏃惰嚜鍔ㄥ垱寤篣I
 var wheel = new WheelBuilder<T>()
-    .WithConfig(config => { ... })
     .WithAdapter(adapter)
-    .WithDataProvider(provider)
-    .WithInput(input)
+    .Build();  // 鉁?鑷姩鍒涘缓9瀹牸UI
+
+// 鏄剧ず/闅愯棌UI
+wheel.Show();  // 鑷姩鏄剧ず鍦ㄩ紶鏍囦綅缃?
+wheel.Hide();  // 鑷姩闅愯棌
+
+// 鏇存柊UI閫変腑鐘舵€?
+wheel.UpdateUISelection(index);
+```
+
+### 鑷畾涔夋垨鍚敤榛樿 UI
+
+QuickWheel 鏍稿績榛樿涓嶉檮甯?UI锛宍QuickWheel.UI` 妯″潡鎻愪緵浜嗕竴涓?9 瀹牸鐨勯粯璁ゅ疄鐜帮紝鍙寜闇€閫夋嫨锛?
+```csharp
+// 浣跨敤榛樿 9 瀹牸 UI锛堥渶寮曞叆 QuickWheel.UI锛?var wheel = new WheelBuilder<T>()
+    .WithAdapter(adapter)
+    .UseDefaultView()   // 鉁?缁戝畾榛樿 UI 瑙嗗浘
     .Build();
+
+// 瀹屽叏鑷畾涔?UI锛氫笉璋冪敤 UseDefaultView锛岃嚜琛屾彁渚?IWheelView<T>
+var customWheel = new WheelBuilder<T>()
+    .WithAdapter(adapter)
+    .Build();           // 榛樿娌℃湁瑙嗗浘
+
+customWheel.SetView(new MyWheelView()); // 瀹炵幇 IWheelView<T>
 ```
 
-### 显示与隐藏
+`QuickWheel.UI` 妯″潡鍖呭惈锛?- `DefaultWheelView<T>`锛氶粯璁?9 瀹牸瑙嗗浘
+- `WheelUIManager<T>`锛氳礋璐ｇ鐞嗛粯璁よ鍥剧殑甯冨眬鍜岃緭鍏?- `WheelSlotDisplay`锛氬崟鏍兼樉绀虹粍浠讹紙鍥炬爣銆佹枃瀛椼€佹偓鍋滃姩鐢伙級
+
+## 閰嶇疆閫夐」
 
 ```csharp
-wheel.Show(position);           // 显示轮盘
-wheel.Hide(executeSelection);   // 隐藏轮盘
-bool isVisible = wheel.IsVisible;
+public class WheelConfig
+{
+    // 鍥哄畾9妲戒綅
+    public const int SLOT_COUNT = 9;
+
+    // 甯冨眬閰嶇疆
+    public float GridCellSize = 40f;     // 鏍煎瓙澶у皬
+    public float GridSpacing = 5f;       // 鏍煎瓙闂磋窛
+
+    // 浜や簰閰嶇疆
+    public bool EnableDragSwap = true;   // 鍚敤鎷栨嫿浜ゆ崲
+    public bool EnableClickSelect = true; // 鍚敤鐐瑰嚮閫変腑
+    public float DeadZoneRadius = 20f;   // 姝诲尯鍗婂緞
+
+    // 瑙嗚閰嶇疆
+    public float HoverScaleMultiplier = 1.15f; // Hover缂╂斁
+    public float AnimationDuration = 0.1f;     // 鍔ㄧ敾鏃堕暱
+
+    // 鎸佷箙鍖栭厤缃?
+    public bool EnablePersistence = false;
+    public string PersistenceKey = "";
+}
 ```
 
-### 槽位操作
+## API鍙傝€?
+
+### Wheel<T> 涓昏鏂规硶
 
 ```csharp
-wheel.SetSlot(index, item);     // 设置槽位
-T item = wheel.GetSlot(index);  // 获取槽位
-wheel.RemoveSlot(index);        // 移除槽位
-wheel.SwapSlots(from, to);      // 交换槽位
-wheel.ClearAllSlots();          // 清空所有
+// 妲戒綅鎿嶄綔
+T GetSlot(int index)
+void SetSlot(int index, T item)
+bool SwapSlots(int index1, int index2)
+
+// 鏄剧ず鎺у埗
+void Show()  // 鑷姩鏄剧ず鍐呯疆UI鍦ㄩ紶鏍囦綅缃?
+void Hide(bool executeSelection = true)  // 鑷姩闅愯棌鍐呯疆UI
+bool IsVisible { get; }
+
+// UI鎺у埗锛堝唴缃甎I锛?
+void EnableUI(Transform parent = null)  // 鎵嬪姩鍚敤UI
+void UpdateUISelection(int selectedIndex)  // 鏇存柊UI閫変腑鐘舵€?
+RectTransform GetUIContainerRect()  // 鑾峰彇UI瀹瑰櫒Rect
+
+// 浜嬩欢璁㈤槄
+EventBus.OnSlotDataChanged += (index, item) => { }
+EventBus.OnSlotsSwapped += (i1, i2) => { }
+
+// 鍙€夌粍浠?
+void SetSelectionStrategy(IWheelSelectionStrategy strategy)
+void SetPersistence(IWheelPersistence<T> persistence)
+void SetInputHandler(IWheelInputHandler handler)
+void SetView(IWheelView<T> view)`r`nvoid SetView(IWheelView<T> view)
 ```
 
-### 事件订阅
+### WheelBuilder<T> 娴佸紡API
 
 ```csharp
-wheel.OnItemSelected += (index, item) => { };
-wheel.OnWheelShown += () => { };
-wheel.OnWheelHidden += (finalIndex) => { };
+new WheelBuilder<T>()\r\n    .WithConfig(config => { /* 配置 */ })\r\n    .WithAdapter(adapter)  // ✅ 必需\r\n    .WithSelectionStrategy(strategy)  // 可选\r\n    .WithPersistence(persistence)  // 可选\r\n    .WithInput(inputHandler)  // 可选\r\n    .UseDefaultView()  // ✅ 使用默认 9 宫格视图（需引用 QuickWheel.UI）\r\n    .OnItemSelected((i, data) => { })\r\n    .OnWheelShown(() => { })\r\n    .OnWheelHidden((i) => { })\r\n    .Build();  // 鉁?鑷姩鍒涘缓9瀹牸UI
 ```
 
----
+## 鏈€浣冲疄璺?
 
-## 🎯 设计目标
+1. **浣跨敤鍐呯疆UI** - 榛樿鍚敤鍐呯疆UI锛屽紑绠卞嵆鐢?
+2. **鍥哄畾9妲戒綅** - 8涓柟鍚戞Ы浣?+ 1涓腑蹇冪┖浣?
+3. **閫傞厤鍣ㄥ垎绂?* - 涓氬姟鏁版嵁鍜孶I鏁版嵁閫氳繃閫傞厤鍣ㄨВ鑰?
+4. **浜嬩欢椹卞姩** - 浣跨敤浜嬩欢鑰岄潪杞鎻愰珮鎬ц兘
+5. **绠€鍗曠ず渚?* - 鍙傝€?`Examples/SimpleExample.cs` 蹇€熶笂鎵?
+6. **鍙€夌粍浠?* - 鎸夐渶娣诲姞鎸佷箙鍖栥€佽緭鍏ュ鐞嗙瓑鍔熻兘
 
-### 已实现
+## 鎵╁睍鎸囧崡
 
-- ✅ **完全解耦** - 核心不依赖任何业务逻辑
-- ✅ **类型安全** - 泛型设计 + 接口约束
-- ✅ **易于使用** - Builder模式 + 链式API
-- ✅ **高度灵活** - 3-8槽位可配置
-- ✅ **可选功能** - 持久化、输入由实例决定
-- ✅ **输入解耦** - 不内置触发方式
-- ✅ **事件驱动** - 完善的事件系统
+### 鑷畾涔夐€夋嫨绛栫暐
 
-### 待实现
+```csharp
+public class MySelectionStrategy : IWheelSelectionStrategy
+{
+    public int GetSlotIndexFromPosition(
+        Vector2 wheelCenter,
+        Vector2 inputPosition,
+        int slotCount,
+        float[] slotAngles)
+    {
+        // 鑷畾涔夐€夋嫨閫昏緫
+        return selectedIndex;
+    }
 
-- ⏳ UI层可视化
-- ⏳ 默认输入实现
-- ⏳ 默认选择算法
-- ⏳ 示例代码
+    public bool IsInDeadZone(
+        Vector2 wheelCenter,
+        Vector2 inputPosition,
+        float deadZoneRadius)
+    {
+        return Vector2.Distance(wheelCenter, inputPosition) < deadZoneRadius;
+    }
+}
+```
 
----
+### 鑷畾涔夋寔涔呭寲
 
-## 📝 许可证
+```csharp
+public class MyPersistence<T> : IWheelPersistence<T>
+{
+    public void Save(string key, WheelLayoutData<T> data) { }
+    public WheelLayoutData<T> Load(string key) { }
+    public bool Has(string key) { }
+    public void Delete(string key) { }
+}
+```
 
-MIT License - 详见 [LICENSE](LICENSE) 文件
+## 璁稿彲璇?
 
----
+MIT License
 
-## 🤝 贡献
+## 鑱旂郴鏂瑰紡
 
-欢迎提交Issue和Pull Request！
+GitHub Issues: [鎶ュ憡闂](https://github.com/your-repo/issues)
 
----
 
-## 📮 联系方式
 
-- 项目地址：[GitHub](https://github.com/yourusername/QuickWheel)
-- 问题反馈：[Issues](https://github.com/yourusername/QuickWheel/issues)
 
----
 
-**版本**: v2.0
-**最后更新**: 2025-01-05
-**开发者**: QuickWheel Team
+
+
+
+
+
+
+
+
+
+

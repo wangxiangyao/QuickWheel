@@ -1,14 +1,14 @@
-using System;
+﻿using System;
 using QuickWheel.Core;
 using QuickWheel.Core.Interfaces;
 
 namespace QuickWheel.Utils
 {
     /// <summary>
-    /// 轮盘构建器
-    /// 提供流畅的链式API创建轮盘
+    /// 杞洏鏋勫缓鍣?
+    /// 鎻愪緵娴佺晠鐨勯摼寮廇PI鍒涘缓杞洏
     /// </summary>
-    /// <typeparam name="T">数据类型</typeparam>
+    /// <typeparam name="T">鏁版嵁绫诲瀷</typeparam>
     public class WheelBuilder<T>
     {
         private WheelConfig _config;
@@ -17,6 +17,7 @@ namespace QuickWheel.Utils
         private IWheelPersistence<T> _persistence;
         private IWheelInputHandler _inputHandler;
         private IWheelSelectionStrategy _selectionStrategy;
+        private IWheelView<T> _view;
 
         private Action<int, T> _onItemSelected;
         private Action _onWheelShown;
@@ -28,10 +29,10 @@ namespace QuickWheel.Utils
         }
 
         /// <summary>
-        /// 配置轮盘
+        /// 閰嶇疆杞洏
         /// </summary>
-        /// <param name="configAction">配置动作</param>
-        /// <returns>构建器</returns>
+        /// <param name="configAction">閰嶇疆鍔ㄤ綔</param>
+        /// <returns>鏋勫缓鍣?/returns>
         public WheelBuilder<T> WithConfig(Action<WheelConfig> configAction)
         {
             configAction?.Invoke(_config);
@@ -39,10 +40,10 @@ namespace QuickWheel.Utils
         }
 
         /// <summary>
-        /// 设置适配器（必需）
+        /// 璁剧疆閫傞厤鍣紙蹇呴渶锛?
         /// </summary>
-        /// <param name="adapter">适配器</param>
-        /// <returns>构建器</returns>
+        /// <param name="adapter">閫傞厤鍣?/param>
+        /// <returns>鏋勫缓鍣?/returns>
         public WheelBuilder<T> WithAdapter(IWheelItemAdapter<T> adapter)
         {
             _adapter = adapter;
@@ -50,10 +51,10 @@ namespace QuickWheel.Utils
         }
 
         /// <summary>
-        /// 设置数据提供者（可选）
+        /// 璁剧疆鏁版嵁鎻愪緵鑰咃紙鍙€夛級
         /// </summary>
-        /// <param name="dataProvider">数据提供者</param>
-        /// <returns>构建器</returns>
+        /// <param name="dataProvider">鏁版嵁鎻愪緵鑰?/param>
+        /// <returns>鏋勫缓鍣?/returns>
         public WheelBuilder<T> WithDataProvider(IWheelDataProvider<T> dataProvider)
         {
             _dataProvider = dataProvider;
@@ -61,10 +62,10 @@ namespace QuickWheel.Utils
         }
 
         /// <summary>
-        /// 设置持久化（可选）
+        /// 璁剧疆鎸佷箙鍖栵紙鍙€夛級
         /// </summary>
-        /// <param name="persistence">持久化实现</param>
-        /// <returns>构建器</returns>
+        /// <param name="persistence">鎸佷箙鍖栧疄鐜?/param>
+        /// <returns>鏋勫缓鍣?/returns>
         public WheelBuilder<T> WithPersistence(IWheelPersistence<T> persistence)
         {
             _persistence = persistence;
@@ -72,10 +73,10 @@ namespace QuickWheel.Utils
         }
 
         /// <summary>
-        /// 设置输入处理器（可选）
+        /// 璁剧疆杈撳叆澶勭悊鍣紙鍙€夛級
         /// </summary>
-        /// <param name="inputHandler">输入处理器</param>
-        /// <returns>构建器</returns>
+        /// <param name="inputHandler">杈撳叆澶勭悊鍣?/param>
+        /// <returns>鏋勫缓鍣?/returns>
         public WheelBuilder<T> WithInput(IWheelInputHandler inputHandler)
         {
             _inputHandler = inputHandler;
@@ -83,10 +84,10 @@ namespace QuickWheel.Utils
         }
 
         /// <summary>
-        /// 设置选择策略（可选）
+        /// 璁剧疆閫夋嫨绛栫暐锛堝彲閫夛級
         /// </summary>
-        /// <param name="selectionStrategy">选择策略</param>
-        /// <returns>构建器</returns>
+        /// <param name="selectionStrategy">閫夋嫨绛栫暐</param>
+        /// <returns>鏋勫缓鍣?/returns>
         public WheelBuilder<T> WithSelectionStrategy(IWheelSelectionStrategy selectionStrategy)
         {
             _selectionStrategy = selectionStrategy;
@@ -94,10 +95,24 @@ namespace QuickWheel.Utils
         }
 
         /// <summary>
-        /// 订阅物品选中事件
+        /// 指定轮盘视图（可选）
         /// </summary>
-        /// <param name="callback">回调</param>
-        /// <returns>构建器</returns>
+        public WheelBuilder<T> WithView(IWheelView<T> view)
+        {
+            _view = view;
+            return this;
+        }
+
+        /// <summary>
+        /// 鍚敤/绂佺敤鍐呯疆9瀹牸UI
+        /// </summary>
+        /// <returns>鏋勫缓鍣?/returns>
+
+        /// <summary>
+        /// 璁㈤槄鐗╁搧閫変腑浜嬩欢
+        /// </summary>
+        /// <param name="callback">鍥炶皟</param>
+        /// <returns>鏋勫缓鍣?/returns>
         public WheelBuilder<T> OnItemSelected(Action<int, T> callback)
         {
             _onItemSelected = callback;
@@ -105,10 +120,10 @@ namespace QuickWheel.Utils
         }
 
         /// <summary>
-        /// 订阅轮盘显示事件
+        /// 璁㈤槄杞洏鏄剧ず浜嬩欢
         /// </summary>
-        /// <param name="callback">回调</param>
-        /// <returns>构建器</returns>
+        /// <param name="callback">鍥炶皟</param>
+        /// <returns>鏋勫缓鍣?/returns>
         public WheelBuilder<T> OnWheelShown(Action callback)
         {
             _onWheelShown = callback;
@@ -116,10 +131,10 @@ namespace QuickWheel.Utils
         }
 
         /// <summary>
-        /// 订阅轮盘隐藏事件
+        /// 璁㈤槄杞洏闅愯棌浜嬩欢
         /// </summary>
-        /// <param name="callback">回调</param>
-        /// <returns>构建器</returns>
+        /// <param name="callback">鍥炶皟</param>
+        /// <returns>鏋勫缓鍣?/returns>
         public WheelBuilder<T> OnWheelHidden(Action<int> callback)
         {
             _onWheelHidden = callback;
@@ -127,9 +142,9 @@ namespace QuickWheel.Utils
         }
 
         /// <summary>
-        /// 构建轮盘
+        /// 鏋勫缓杞洏
         /// </summary>
-        /// <returns>轮盘实例</returns>
+        /// <returns>杞洏瀹炰緥</returns>
         public Wheel<T> Build()
         {
             if (_adapter == null)
@@ -137,10 +152,10 @@ namespace QuickWheel.Utils
                 throw new InvalidOperationException("Adapter is required. Call WithAdapter() before Build().");
             }
 
-            // 创建轮盘
+            // 鍒涘缓杞洏
             var wheel = new Wheel<T>(_config, _adapter);
 
-            // 设置可选组件
+            // 璁剧疆鍙€夌粍浠?
             if (_dataProvider != null)
             {
                 wheel.SetDataProvider(_dataProvider);
@@ -161,7 +176,7 @@ namespace QuickWheel.Utils
                 wheel.SetSelectionStrategy(_selectionStrategy);
             }
 
-            // 订阅事件
+            // 璁㈤槄浜嬩欢
             if (_onItemSelected != null)
             {
                 wheel.OnItemSelected += _onItemSelected;
@@ -177,16 +192,28 @@ namespace QuickWheel.Utils
                 wheel.OnWheelHidden += _onWheelHidden;
             }
 
+            if (_view != null)
+            {
+                wheel.SetView(_view);
+            }
+
             return wheel;
         }
 
         /// <summary>
-        /// 创建简单轮盘（使用默认配置）
+        /// 鍒涘缓绠€鍗曡疆鐩橈紙浣跨敤榛樿閰嶇疆锛?
         /// </summary>
-        /// <returns>构建器</returns>
+        /// <returns>鏋勫缓鍣?/returns>
         public static WheelBuilder<T> CreateSimple()
         {
             return new WheelBuilder<T>();
         }
     }
 }
+
+
+
+
+
+
+

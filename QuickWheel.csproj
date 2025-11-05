@@ -45,9 +45,12 @@
   </ItemGroup>
 
   <!-- NuGet依赖 -->
+  <!-- QuickWheel 不使用 Harmony，移除依赖 -->
+  <!--
   <ItemGroup>
     <PackageReference Include="Lib.Harmony" Version="2.4.1" />
   </ItemGroup>
+  -->
 
   <!-- 排除示例代码和其他不需要的文件 -->
   <ItemGroup>
@@ -56,6 +59,8 @@
     <Compile Remove="ModBehaviour.cs" />
     <Compile Remove="README.md" />
     <Compile Remove="UI_disabled/**/*.cs" />
+    <Compile Remove="lib/**/*.cs" />
+    <Compile Remove="src/UI/**/*.cs" />
   </ItemGroup>
 
 </Project>
