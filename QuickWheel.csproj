@@ -1,0 +1,61 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <Nullable>disable</Nullable>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <PackageId>QuickWheel</PackageId>
+    <PackageVersion>1.0.0</PackageVersion>
+    <Authors>QuickWheel Team</Authors>
+    <Description>通用轮盘选择模块 - 适用于Unity Mod开发</Description>
+    <PackageTags>unity;mod;wheel;ui;selection</PackageTags>
+    <AssemblyName>QuickWheel</AssemblyName>
+    <RootNamespace>QuickWheel</RootNamespace>
+    <DuckovPath>D:\steam\steamapps\common\Escape from Duckov</DuckovPath>
+  </PropertyGroup>
+
+  <!-- Unity引用（根据实际情况调整路径） -->
+  <PropertyGroup Condition="'$(DuckovPath)' != ''">
+    <DuckovPath>$(DuckovPath)</DuckovPath>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(DuckovPath)' != ''">
+    <Reference Include="$(DuckovPath)\Duckov_Data\Managed\TeamSoda.*">
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="$(DuckovPath)\Duckov_Data\Managed\ItemStatsSystem.dll">
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="$(DuckovPath)\Duckov_Data\Managed\Unity*">
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="$(DuckovPath)\Duckov_Data\Managed\Assembly-CSharp.dll">
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="$(DuckovPath)\Duckov_Data\Managed\SodaLocalization.dll">
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="$(DuckovPath)\Duckov_Data\Managed\DOTween.dll">
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="$(DuckovPath)\Duckov_Data\Managed\DOTweenPro.dll">
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!-- NuGet依赖 -->
+  <ItemGroup>
+    <PackageReference Include="Lib.Harmony" Version="2.4.1" />
+  </ItemGroup>
+
+  <!-- 排除示例代码和其他不需要的文件 -->
+  <ItemGroup>
+    <Compile Remove="Examples/**/*.cs" />
+    <Compile Remove="Documentation/**/*.md" />
+    <Compile Remove="ModBehaviour.cs" />
+    <Compile Remove="README.md" />
+    <Compile Remove="UI_disabled/**/*.cs" />
+  </ItemGroup>
+
+</Project>
