@@ -73,7 +73,10 @@ namespace QuickWheel.Core
 				DeadZoneRadius = 20f,
 				HoverScaleMultiplier = 1.15f,
 				AnimationDuration = 0.1f,
-				EnablePersistence = false
+				EnablePersistence = false,
+				ShowName = true,
+				ShowRightText = true,
+				ShowDurabilityBar = true
 			};
 		}
 
@@ -115,6 +118,15 @@ namespace QuickWheel.Core
 
 		// Token: 0x0400005E RID: 94
 		public string PersistenceKey = "";
+
+		// 是否显示名称文本
+		public bool ShowName = true;
+
+		// 是否显示右侧信息（数量/文本）
+		public bool ShowRightText = true;
+
+		// 是否显示耐久条（当有耐久信息时）
+		public bool ShowDurabilityBar = true;
 	}
 }
 
