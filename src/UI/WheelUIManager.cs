@@ -28,6 +28,13 @@ namespace QuickWheel.UI
         // 当前选中索引
         private int _currentSelectedIndex = -1;
 
+        // 轮盘显示时的中心位置
+        private Vector2 _wheelCenter;
+
+        // 🆕 拖拽状态标志（用于暂停输入处理）
+        private bool _isDragging = false;
+        public bool IsDragging => _isDragging;
+
         // 9宫格位置映射（屏幕坐标，相对于轮盘中心）
         private static readonly Vector2Int[] GRID_POSITIONS = new Vector2Int[]
         {
@@ -76,7 +83,7 @@ namespace QuickWheel.UI
 
             _wheelCanvas = canvasObj.AddComponent<Canvas>();
             _wheelCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            _wheelCanvas.sortingOrder = 1000;
+            _wheelCanvas.sortingOrder = 10000;  // 提高层级，确保在游戏UI之上
 
             var canvasScaler = canvasObj.AddComponent<CanvasScaler>();
             canvasScaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
@@ -123,7 +130,7 @@ namespace QuickWheel.UI
                 // 添加显示组件
                 var display = slotObj.AddComponent<WheelSlotDisplay>();
                 var wheelItem = ConvertToWheelItem(_wheel.GetSlot(i));
-                display.Initialize(wheelItem, i, new Vector2(cellSize, cellSize));
+                display.Initialize(wheelItem, i, new Vector2(cellSize, cellSize), _wheel.Config, this);  // 🆕 传入UIManager引用用于拖拽交换
                 _slotDisplays.Add(display);
             }
 
@@ -149,7 +156,9 @@ namespace QuickWheel.UI
             blockerRect.offsetMax = Vector2.zero;
 
             var blockerImage = _inputBlocker.AddComponent<Image>();
-            blockerImage.color = new Color(0, 0, 0, 0.3f);  // 半透明黑色
+            // 使用透明背景拦截输入
+            // Unity特性：alpha=0时不会拦截射线检测，需要极小的alpha值
+            blockerImage.color = new Color(0, 0, 0, 0.01f);  // 几乎透明的背景，拦截所有输入
             blockerImage.raycastTarget = true;
 
             // 确保在轮盘容器下方
@@ -166,20 +175,56 @@ namespace QuickWheel.UI
         }
 
         /// <summary>
-        /// 显示轮盘（在鼠标位置）
+        /// 🆕 标准点击处理方法
+        /// 处理槽位点击事件，触发轮盘的点击逻辑
         /// </summary>
-        public void Show()
+        /// <param name="slotIndex">点击的槽位索引</param>
+        public void HandleSlotClick(int slotIndex)
+        {
+            Debug.Log($"[WheelUIManager] 🟣 HandleSlotClick called: slotIndex={slotIndex}");
+
+            // 通过EventBus触发点击事件，让Wheel处理选择和关闭逻辑
+            _wheel.EventBus.TriggerSlotClicked(slotIndex);
+
+            Debug.Log($"[WheelUIManager] 🟣 HandleSlotClick finished");
+        }
+
+        /// <summary>
+        /// 显示轮盘
+        /// </summary>
+        /// <param name="centerPosition">轮盘中心位置（可选，为null则使用当前鼠标位置）</param>
+        public void Show(Vector2? centerPosition = null)
         {
             if (_wheelContainer == null) return;
 
             _wheelContainer.SetActive(true);
             _inputBlocker.SetActive(true);
 
-            // 轮盘显示在鼠标位置
-            var containerRect = _wheelContainer.GetComponent<RectTransform>();
-            containerRect.position = UnityEngine.Input.mousePosition;
+            // 使用提供的中心位置，或当前鼠标位置
+            if (centerPosition.HasValue)
+            {
+                _wheelCenter = centerPosition.Value;
+                Debug.Log($"[WheelUIManager] 使用预设中心位置: {_wheelCenter}");
+            }
+            else
+            {
+                _wheelCenter = UnityEngine.Input.mousePosition;
+                Debug.Log($"[WheelUIManager] 使用当前鼠标位置: {_wheelCenter}");
+            }
 
-            Debug.Log("[WheelUIManager] 轮盘已显示");
+            // 轮盘显示在中心位置
+            var containerRect = _wheelContainer.GetComponent<RectTransform>();
+            containerRect.position = _wheelCenter;
+
+            Debug.Log($"[WheelUIManager] 轮盘已显示，中心位置: {_wheelCenter}");
+        }
+
+        /// <summary>
+        /// 获取轮盘中心位置
+        /// </summary>
+        public Vector2 GetWheelCenter()
+        {
+            return _wheelCenter;
         }
 
         /// <summary>
@@ -188,6 +233,13 @@ namespace QuickWheel.UI
         public void Hide()
         {
             if (_wheelContainer == null) return;
+
+            // 兜底：关闭前强制清理所有拖拽状态与 hover，避免 EndDrag/Drop 丢失导致残留
+            foreach (var display in _slotDisplays)
+            {
+                display.ForceCleanupDrag();
+            }
+            UpdateHover(-1);
 
             _wheelContainer.SetActive(false);
             _inputBlocker.SetActive(false);
@@ -214,6 +266,17 @@ namespace QuickWheel.UI
         }
 
         /// <summary>
+        /// 更新悬停状态
+        /// </summary>
+        public void UpdateHover(int hoveredIndex)
+        {
+            foreach (var display in _slotDisplays)
+            {
+                display.SetHovered(display.GetSlotIndex() == hoveredIndex);
+            }
+        }
+
+        /// <summary>
         /// 槽位数据变化事件处理
         /// </summary>
         private void OnSlotDataChanged(int index, T data)
@@ -231,6 +294,18 @@ namespace QuickWheel.UI
         {
             if (index1 < 0 || index1 >= _slotDisplays.Count) return;
             if (index2 < 0 || index2 >= _slotDisplays.Count) return;
+
+            // 🆕 选中状态跟随物品移动
+            if (_currentSelectedIndex == index1)
+            {
+                Debug.Log($"[WheelUIManager] Selected index moved: {index1} -> {index2}");
+                UpdateSelection(index2);
+            }
+            else if (_currentSelectedIndex == index2)
+            {
+                Debug.Log($"[WheelUIManager] Selected index moved: {index2} -> {index1}");
+                UpdateSelection(index1);
+            }
 
             // 刷新两个槽位的显示
             var data1 = _wheel.GetSlot(index1);
@@ -278,6 +353,79 @@ namespace QuickWheel.UI
             }
 
             _slotDisplays.Clear();
+        }
+
+        /// <summary>
+        /// 🆕 交换两个槽位的数据（拖拽功能）
+        /// </summary>
+        /// <summary>
+        /// 🆕 设置拖拽状态（用于暂停输入处理）
+        /// </summary>
+        public void SetDragging(bool isDragging)
+        {
+            _isDragging = isDragging;
+            Debug.Log($"[WheelUIManager] Dragging state: {_isDragging}");
+        }
+
+        public void SwapSlots(int fromIndex, int toIndex)
+        {
+            Debug.Log($"[WheelUIManager] SwapSlots: {fromIndex} <-> {toIndex}");
+
+            // 边界检查
+            if (fromIndex < 0 || fromIndex >= _slotDisplays.Count ||
+                toIndex < 0 || toIndex >= _slotDisplays.Count)
+            {
+                Debug.LogWarning($"[WheelUIManager] Invalid slot indices: {fromIndex}, {toIndex}");
+                return;
+            }
+
+            // 调用 Wheel 核心进行数据交换（这会触发 EventBus 事件）
+            if (_wheel != null)
+            {
+                _wheel.SwapSlots(fromIndex, toIndex);
+                Debug.Log($"[WheelUIManager] Called Wheel.SwapSlots({fromIndex}, {toIndex})");
+
+                // 立即刷新UI显示
+                RefreshSlot(fromIndex);
+                RefreshSlot(toIndex);
+            }
+            else
+            {
+                Debug.LogWarning("[WheelUIManager] Wheel is null, cannot swap slots");
+            }
+        }
+
+        /// <summary>
+        /// 刷新单个槽位的显示
+        /// </summary>
+        private void RefreshSlot(int index)
+        {
+            if (index < 0 || index >= _slotDisplays.Count) return;
+
+            var display = _slotDisplays[index];
+            var wheelItem = ConvertToWheelItem(_wheel.GetSlot(index));
+            display.SetData(wheelItem);
+        }
+
+        /// <summary>
+        /// 🆕 选中指定槽位并关闭轮盘
+        /// </summary>
+        /// <param name="index">要选中的槽位索引</param>
+        public void SelectAndClose(int index)
+        {
+            Debug.Log($"[WheelUIManager] SelectAndClose: {index}");
+
+            if (index < 0 || index >= _slotDisplays.Count)
+            {
+                Debug.LogWarning($"[WheelUIManager] Invalid slot index: {index}");
+                return;
+            }
+
+            // 设置选中索引
+            _wheel.SetSelectedIndex(index);
+
+            // 立即关闭轮盘（执行选择）
+            _wheel.Hide(true);
         }
     }
 }
