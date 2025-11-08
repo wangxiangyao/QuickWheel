@@ -1,6 +1,7 @@
-using System;
+﻿using System;
 using QuickWheel.Core.Interfaces;
 using QuickWheel.Core.States;
+using QuickWheel.UI;
 using UnityEngine;
 
 namespace QuickWheel.Core
@@ -72,6 +73,23 @@ namespace QuickWheel.Core
                 {
                     _view.OnHoverChanged(index);
                 }
+            };
+
+            // 🆕 订阅点击事件，处理用户点击
+            _eventBus.OnSlotClicked += clickedIndex =>
+            {
+                Debug.Log($"[Wheel] 🟡 OnSlotClicked event fired: clickedIndex={clickedIndex}, CurrentState={_stateManager.CurrentState}");
+
+                // 🆕 点击时：只更新选中状态，不使用物品（参考 backpack_quickwheel 的 ChangeSelection 模式）
+                // 注意：不能在这里调用 SetSelectedIndex，因为事件锁会阻塞嵌套事件
+                // 解决方案：先更新 HoveredIndex，然后在 Hide 中同步到 SelectedIndex
+                _stateManager.SetHoveredIndex(clickedIndex);
+                Debug.Log($"[Wheel] 🟡 Updated hovered index to {clickedIndex} (will sync to selected)");
+
+                // 关闭轮盘，传入特殊模式标记：executeSelection=true 但不使用物品
+                HideAndUpdateSelection();
+
+                Debug.Log($"[Wheel] 🟡 OnSlotClicked event handler finished");
             };
 
             Debug.Log($"[Wheel] Initialized with {_config.SlotCount} slots");
@@ -185,25 +203,44 @@ namespace QuickWheel.Core
             _stateManager.TransitionTo(WheelState.Active);
         }
 
-        public void Hide(bool executeSelection = true)
+        public void Hide(bool executeSelection = true, bool syncHoverToSelected = false)
         {
+            Debug.Log($"[Wheel] 🔴 Hide called: executeSelection={executeSelection}, syncHoverToSelected={syncHoverToSelected}, CurrentState={_stateManager.CurrentState}, HoveredIndex={_stateManager.HoveredIndex}");
+
             if (_stateManager.CurrentState != WheelState.Active)
             {
-                Debug.LogWarning("[Wheel] Not in active state");
+                Debug.LogWarning($"[Wheel] ❌ Hide aborted: Not in active state (State={_stateManager.CurrentState})");
                 return;
             }
 
             int finalIndex = -1;
+            int selectedIndexToSync = -1;  // 🆕 用于延迟触发 OnSelectionChanged
 
-            if (executeSelection && _stateManager.HoveredIndex >= 0)
+            // 🆕 点击模式：同步hover到selected，但不使用物品
+            if (syncHoverToSelected && _stateManager.HoveredIndex >= 0)
             {
                 finalIndex = _stateManager.HoveredIndex;
+                Debug.Log($"[Wheel] 🔴 Hide: Syncing hover to selected: {finalIndex}");
+                _stateManager.SetSelectedIndex(finalIndex);
+                selectedIndexToSync = finalIndex;  // 标记需要触发事件
+            }
+            // 松开快捷键模式：使用hover的物品
+            else if (executeSelection && _stateManager.HoveredIndex >= 0)
+            {
+                finalIndex = _stateManager.HoveredIndex;
+                Debug.Log($"[Wheel] 🔴 Hide: Will select item at index={finalIndex}");
                 _stateManager.SetSelectedIndex(finalIndex);
 
                 var selectedItem = _stateManager.GetSlot(finalIndex);
+                Debug.Log($"[Wheel] 🔴 Hide: Invoking OnItemSelected for index={finalIndex}, item={selectedItem}");
                 OnItemSelected?.Invoke(finalIndex, selectedItem);
             }
+            else
+            {
+                Debug.Log($"[Wheel] 🔴 Hide: No selection (executeSelection={executeSelection}, HoveredIndex={_stateManager.HoveredIndex})");
+            }
 
+            Debug.Log($"[Wheel] 🔴 Hide: Transitioning to Hidden state");
             _stateManager.TransitionTo(WheelState.Hiding);
             _stateManager.TransitionTo(WheelState.Hidden);
 
@@ -213,7 +250,50 @@ namespace QuickWheel.Core
             {
                 _view.OnWheelHidden(finalIndex);
             }
+
+            Debug.Log($"[Wheel] 🔴 Hide finished: finalIndex={finalIndex}");
+
+            // 🆕 点击模式：直接调用 OnSelectionChanged 事件，绕过事件锁
+            // 因为我们在 Hide 方法末尾，已经脱离了事件处理流程
+            if (selectedIndexToSync >= 0)
+            {
+                Debug.Log($"[Wheel] 🔵 Syncing selection change: {selectedIndexToSync}");
+
+                // 通知 View
+                if (_view != null)
+                {
+                    _view.OnSelectionChanged(selectedIndexToSync);
+                }
+
+                // 直接调用事件，不通过 EventBus（避免事件锁）
+                if (OnSelectionChanged != null)
+                {
+                    try
+                    {
+                        foreach (var handler in OnSelectionChanged.GetInvocationList())
+                        {
+                            try
+                            {
+                                ((Action<int>)handler)(selectedIndexToSync);
+                            }
+                            catch (System.Exception ex)
+                            {
+                                Debug.LogError($"[Wheel] Error invoking OnSelectionChanged handler: {ex.Message}");
+                            }
+                        }
+                    }
+                    catch (System.Exception ex)
+                    {
+                        Debug.LogError($"[Wheel] Error invoking OnSelectionChanged: {ex.Message}");
+                    }
+                }
+            }
         }
+
+        /// <summary>
+        /// 🆕 选中状态改变事件（绕过 EventBus，直接订阅）
+        /// </summary>
+        public event Action<int> OnSelectionChanged;
 
         public void SetSlot(int index, T item)
         {
@@ -266,18 +346,33 @@ namespace QuickWheel.Core
 
         public void ManualSetHover(int index)
         {
+            Debug.Log($"[Wheel] 🔵 ManualSetHover called: index={index}, currentHovered={_stateManager.HoveredIndex}");
             _stateManager.SetHoveredIndex(index);
             _eventBus.TriggerSlotHovered(index);
+            Debug.Log($"[Wheel] 🔵 ManualSetHover finished: newHovered={_stateManager.HoveredIndex}");
         }
 
         public void ManualConfirm()
         {
+            Debug.Log($"[Wheel] 🟢 ManualConfirm called: State={_stateManager.CurrentState}, HoveredIndex={_stateManager.HoveredIndex}");
             Hide(true);
+            Debug.Log($"[Wheel] 🟢 ManualConfirm finished");
         }
 
         public void ManualCancel()
         {
             Hide(false);
+        }
+
+        /// <summary>
+        /// 🆕 隐藏轮盘并更新选中状态（用于点击选择）
+        /// 点击模式：同步hover到selected，但不使用物品
+        /// </summary>
+        private void HideAndUpdateSelection()
+        {
+            Debug.Log($"[Wheel] 🟢 HideAndUpdateSelection called: HoveredIndex={_stateManager.HoveredIndex}");
+            Hide(executeSelection: false, syncHoverToSelected: true);
+            Debug.Log($"[Wheel] 🟢 HideAndUpdateSelection finished");
         }
 
         public void Update()
@@ -382,15 +477,60 @@ namespace QuickWheel.Core
         {
             if (_stateManager.CurrentState != WheelState.Active)
             {
+                Debug.Log($"[Wheel] HandleInputPositionChanged skipped - State: {_stateManager.CurrentState}");
                 return;
+            }
+
+            // 🆕 拖拽时跳过输入处理，避免选中状态跟着变化
+            if (_view is DefaultWheelView<T> defaultView)
+            {
+                // 通过反射获取 UIManager 的拖拽状态
+                var uiManagerField = defaultView.GetType().GetField("_uiManager",
+                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                if (uiManagerField != null)
+                {
+                    var uiManager = uiManagerField.GetValue(defaultView);
+                    if (uiManager != null)
+                    {
+                        var isDraggingProp = uiManager.GetType().GetProperty("IsDragging");
+                        if (isDraggingProp != null)
+                        {
+                            bool isDragging = (bool)isDraggingProp.GetValue(uiManager);
+                            if (isDragging)
+                            {
+                                // Debug.Log($"[Wheel] HandleInputPositionChanged skipped - Dragging");
+                                return;
+                            }
+                        }
+                    }
+                }
             }
 
             if (_selectionStrategy == null || _view == null)
             {
+                Debug.LogWarning($"[Wheel] HandleInputPositionChanged skipped - Strategy: {_selectionStrategy != null}, View: {_view != null}");
                 return;
             }
 
-            // Selection strategy 会在业务层调用 ManualSetHover，因此此处仅保留扩展点。
+            // 创建选择上下文
+            var context = new WheelSelectionContext
+            {
+                InputPosition = position,
+                WheelCenter = _view.GetWheelCenter(),
+                Config = _config
+            };
+
+            // 使用选择策略计算选中索引
+            int selectedIndex = _selectionStrategy.GetSelectedIndex(context);
+
+            // Debug.Log($"[Wheel] Position: {position}, Center: {context.WheelCenter}, Selected: {selectedIndex}, Current: {_stateManager.HoveredIndex}");
+
+            // 更新悬停状态
+            if (selectedIndex != _stateManager.HoveredIndex)
+            {
+                _stateManager.SetHoveredIndex(selectedIndex);
+                _eventBus.TriggerSlotHovered(selectedIndex);
+            }
         }
 
         private void HandleInputConfirm()
@@ -441,3 +581,4 @@ namespace QuickWheel.Core
         }
     }
 }
+

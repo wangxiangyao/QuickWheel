@@ -1,70 +1,102 @@
-using System;
+﻿using System;
+using System.Diagnostics;
 using QuickWheel.Core.Interfaces;
 using UnityEngine;
 
 namespace QuickWheel.Input
 {
-    /// <summary>
-    /// 鼠标轮盘输入处理器
-    /// 按下键显示轮盘，鼠标移动选择，松开键确认
-    /// </summary>
-    public class MouseWheelInput : IWheelInputHandler
-    {
-        public event Action<Vector2> OnPositionChanged;
-        public event Action OnConfirm;
-        public event Action OnCancel;
+	public class MouseWheelInput : IWheelInputHandler
+	{ public event Action<Vector2> OnPositionChanged; public event Action OnConfirm; public event Action OnCancel; public event Action OnKeyPressed; public event Action OnShortPressed; public event Action OnLongPressed;
 
-        private KeyCode _triggerKey;
-        private bool _isPressed;
+		public MouseWheelInput(KeyCode triggerKey = KeyCode.Alpha1)
+		{
+			this._triggerKey = triggerKey;
+		}
 
-        /// <summary>
-        /// 构造函数
-        /// </summary>
-        /// <param name="triggerKey">触发键</param>
-        public MouseWheelInput(KeyCode triggerKey = KeyCode.Alpha1)
-        {
-            _triggerKey = triggerKey;
-        }
+		public MouseWheelInput()
+		{
+			this._triggerKey = KeyCode.None;
+		}
 
-        /// <summary>
-        /// 每帧更新
-        /// </summary>
-        public void OnUpdate()
-        {
-            // 检测按键按下
-            if (UnityEngine.Input.GetKeyDown(_triggerKey))
-            {
-                _isPressed = true;
-            }
+		public void OnUpdate()
+		{
+			if (this._triggerKey == KeyCode.None)
+			{
+				if (this.IsPressed)
+				{
+					Vector3 mousePos = UnityEngine.Input.mousePosition;
+					this.OnPositionChanged?.Invoke(mousePos);
+				}
+				if (UnityEngine.Input.GetKeyDown(KeyCode.Escape))
+				{
+					this._isPressed = false;
+					this.OnCancel?.Invoke();
+				}
+				return;
+			}
 
-            // 按键按住时
-            if (_isPressed)
-            {
-                // 持续发送鼠标位置
-                OnPositionChanged?.Invoke(UnityEngine.Input.mousePosition);
+			if (UnityEngine.Input.GetKeyDown(this._triggerKey))
+			{
+				this._isPressed = true;
+				this._holdTime = 0f;
+				this._hasTriggeredLongPress = false;
+				this.OnKeyPressed?.Invoke();
+			}
 
-                // 检测松开
-                if (UnityEngine.Input.GetKeyUp(_triggerKey))
-                {
-                    _isPressed = false;
-                    OnConfirm?.Invoke();
-                }
-            }
+			if (this._isPressed)
+			{
+				this._holdTime += Time.unscaledDeltaTime;
+				if (!this._hasTriggeredLongPress && this._holdTime >= 0.25f)
+				{
+					this._hasTriggeredLongPress = true;
+					this.OnLongPressed?.Invoke();
+				}
+				if (this._hasTriggeredLongPress)
+				{
+					this.OnPositionChanged?.Invoke(UnityEngine.Input.mousePosition);
+				}
+				if (UnityEngine.Input.GetKeyUp(this._triggerKey))
+				{
+					this._isPressed = false;
+					if (this._hasTriggeredLongPress)
+					{
+						this.OnConfirm?.Invoke();
+					}
+					else
+					{
+						this.OnShortPressed?.Invoke();
+					}
+				}
+			}
 
-            // Esc取消
-            if (UnityEngine.Input.GetKeyDown(KeyCode.Escape) && _isPressed)
-            {
-                _isPressed = false;
-                OnCancel?.Invoke();
-            }
-        }
+			if (UnityEngine.Input.GetKeyDown(KeyCode.Escape) && this._isPressed)
+			{
+				this._isPressed = false;
+				this.OnCancel?.Invoke();
+			}
+		}
 
-        /// <summary>
-        /// 重置状态
-        /// </summary>
-        public void Reset()
-        {
-            _isPressed = false;
-        }
-    }
+		public void Reset()
+		{
+			this._isPressed = false;
+			this._holdTime = 0f;
+			this._hasTriggeredLongPress = false;
+		}
+
+		public bool IsPressed => this._isPressed;
+
+		public bool IsLongPressed => this._hasTriggeredLongPress;
+
+		public void SetPressedState(bool isPressed)
+		{
+			this._isPressed = isPressed;
+		}
+
+		private KeyCode _triggerKey;
+		private bool _isPressed;
+		private float _holdTime;
+		private bool _hasTriggeredLongPress;
+	}
 }
+
+

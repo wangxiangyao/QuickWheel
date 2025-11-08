@@ -25,5 +25,10 @@ namespace QuickWheel.Core.Interfaces
         void OnSlotsSwapped(int index1, int index2);
         void OnSelectionChanged(int selectedIndex);
         void OnHoverChanged(int hoveredIndex);
+
+        /// <summary>
+        /// 获取轮盘中心位置（屏幕坐标）
+        /// </summary>
+        UnityEngine.Vector2 GetWheelCenter();
     }
 }
