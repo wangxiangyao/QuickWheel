@@ -78,8 +78,12 @@ namespace QuickWheel.UI
         {
             // 鍒涘缓Canvas
             var canvasObj = new GameObject("QuickWheelCanvas");
+            // 跨场景持久化，避免切场景后UI不可见
+            UnityEngine.Object.DontDestroyOnLoad(canvasObj);
             if (parent != null)
+            {
                 canvasObj.transform.SetParent(parent, false);
+            }
 
             _wheelCanvas = canvasObj.AddComponent<Canvas>();
             _wheelCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
