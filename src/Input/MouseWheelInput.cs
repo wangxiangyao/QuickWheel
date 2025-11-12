@@ -27,11 +27,6 @@ namespace QuickWheel.Input
 					Vector3 mousePos = UnityEngine.Input.mousePosition;
 					this.OnPositionChanged?.Invoke(mousePos);
 				}
-				if (UnityEngine.Input.GetKeyDown(KeyCode.Escape))
-				{
-					this._isPressed = false;
-					this.OnCancel?.Invoke();
-				}
 				return;
 			}
 
