@@ -352,10 +352,84 @@ namespace QuickWheel.Core
             Debug.Log($"[Wheel] 🔵 ManualSetHover finished: newHovered={_stateManager.HoveredIndex}");
         }
 
+        /// <summary>
+        /// 🆕 循环切换选中项（用于滚轮输入）
+        /// 直接切换 SelectedIndex 并触发 OnSelectionChanged 事件（同步快捷栏）
+        /// </summary>
+        /// <param name="direction">方向：正数向下一个，负数向上一个</param>
+        public void CycleSelection(int direction)
+        {
+            if (_stateManager.CurrentState != WheelState.Active)
+            {
+                return;
+            }
+
+            // 从当前选中索引开始
+            int currentIndex = _stateManager.SelectedIndex;
+            if (currentIndex < 0)
+            {
+                currentIndex = 0;
+            }
+
+            // 查找下一个非空槽位
+            int nextIndex = currentIndex;
+            int attempts = 0;
+            int maxAttempts = _config.SlotCount;
+
+            do
+            {
+                nextIndex = (nextIndex + (direction > 0 ? 1 : -1) + _config.SlotCount) % _config.SlotCount;
+                attempts++;
+
+                if (_stateManager.GetSlot(nextIndex) != null || attempts >= maxAttempts)
+                {
+                    break;
+                }
+            } while (attempts < maxAttempts);
+
+            // 只有找到非空槽位才切换
+            if (_stateManager.GetSlot(nextIndex) != null)
+            {
+                Debug.Log($"[Wheel] 滚轮切换选中: {currentIndex} → {nextIndex}");
+
+                // 直接设置 SelectedIndex
+                _stateManager.SetSelectedIndex(nextIndex);
+
+                // 触发 OnSelectionChanged 事件（通知外部同步快捷栏）
+                if (OnSelectionChanged != null)
+                {
+                    try
+                    {
+                        foreach (var handler in OnSelectionChanged.GetInvocationList())
+                        {
+                            try
+                            {
+                                ((System.Action<int>)handler)(nextIndex);
+                            }
+                            catch (System.Exception ex)
+                            {
+                                UnityEngine.Debug.LogError($"[Wheel] Error invoking OnSelectionChanged: {ex.Message}");
+                            }
+                        }
+                    }
+                    catch (System.Exception ex)
+                    {
+                        UnityEngine.Debug.LogError($"[Wheel] Error invoking OnSelectionChanged: {ex.Message}");
+                    }
+                }
+
+                // 通知 View 更新选中状态
+                if (_view != null)
+                {
+                    _view.OnSelectionChanged(nextIndex);
+                }
+            }
+        }
+
         public void ManualConfirm()
         {
             Debug.Log($"[Wheel] 🟢 ManualConfirm called: State={_stateManager.CurrentState}, HoveredIndex={_stateManager.HoveredIndex}");
-            Hide(true);
+            HideAndUpdateSelection();
             Debug.Log($"[Wheel] 🟢 ManualConfirm finished");
         }
 

@@ -440,6 +440,18 @@ namespace QuickWheel.UI
                 return;
             }
 
+            // 🆕 拖拽验证：检查是否允许拖拽此槽位
+            if (_config.CanDragSlot != null)
+            {
+                var (canDrag, reason) = _config.CanDragSlot(_slotIndex);
+                if (!canDrag)
+                {
+                    // 不允许拖拽，直接返回（回调内部会显示提示）
+                    Debug.LogWarning($"[WheelSlotDisplay] 拖拽被阻止: 槽位{_slotIndex}, 原因={reason}");
+                    return;
+                }
+            }
+
             _isDragging = true;
 
             // 🆕 通知 UIManager 开始拖拽（暂停输入处理）

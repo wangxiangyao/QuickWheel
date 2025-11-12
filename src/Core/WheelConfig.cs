@@ -127,6 +127,12 @@ namespace QuickWheel.Core
 
 		// 是否显示耐久条（当有耐久信息时）
 		public bool ShowDurabilityBar = true;
+
+		/// <summary>
+		/// 🆕 拖拽验证回调：返回 (是否可拖拽, 不可拖拽原因)
+		/// 用于在拖拽开始前检查槽位是否允许拖拽
+		/// </summary>
+		public Func<int, (bool canDrag, string reason)> CanDragSlot = null;
 	}
 }
 
